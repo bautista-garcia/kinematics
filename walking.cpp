@@ -12,14 +12,20 @@ int clampServoAngle(int angle) {
 
 void updateServoPos(int target1, int target2, int target3, char leg){
   if (leg == 'l'){
-    hipL.write(robotConfig.hipLOffset - target1);
-    kneeL.write(robotConfig.kneeLOffset - target2);
-    ankleL.write(2*robotConfig.ankleLOffset - target3);
+    currentLeftLeg.hip = robotConfig.hipLOffset - target1;
+    currentLeftLeg.knee = robotConfig.kneeLOffset - target2;
+    currentLeftLeg.ankle = 2*robotConfig.ankleLOffset - target3;
+    hipL.write(currentLeftLeg.hip);
+    kneeL.write(currentLeftLeg.knee);
+    ankleL.write(currentLeftLeg.ankle);
   }
   else if (leg == 'r'){
-    hipR.write(robotConfig.hipROffset + target1);
-    kneeR.write(robotConfig.kneeROffset + target2);
-    ankleR.write(target3);
+    currentRightLeg.hip = robotConfig.hipROffset + target1;
+    currentRightLeg.knee = robotConfig.kneeROffset + target2;
+    currentRightLeg.ankle = target3;
+    hipR.write(currentRightLeg.hip);
+    kneeR.write(currentRightLeg.knee);
+    ankleR.write(currentRightLeg.ankle);
   }
 }
 

@@ -67,10 +67,49 @@ void handleSetConfig() {
   server.send(303);
 }
 
-void handleForward()  { Serial.println("UI: Adelante"); shouldWalkForward = true;  server.sendHeader("Location", "/"); server.send(303); }
-void handleBackward() { Serial.println("UI: Atras");                       server.sendHeader("Location", "/"); server.send(303); }
-void handleLeft()     { Serial.println("UI: Izquierda");                   server.sendHeader("Location", "/"); server.send(303); }
-void handleRight()    { Serial.println("UI: Derecha");                     server.sendHeader("Location", "/"); server.send(303); }
+void handleForward()  { Serial.println("UI: Adelante"); shouldWalkForward = true;  server.sendHeader("Location", "/kinematics"); server.send(303); }
+void handleBackward() { Serial.println("UI: Atras");                       server.sendHeader("Location", "/kinematics"); server.send(303); }
+void handleLeft()     { Serial.println("UI: Izquierda");                   server.sendHeader("Location", "/kinematics"); server.send(303); }
+void handleRight()    { Serial.println("UI: Derecha");                     server.sendHeader("Location", "/kinematics"); server.send(303); }
+
+void handleGetLegs() {
+  String json = "{"
+                "\"left\":{"
+                "\"hip\":" + String(currentLeftLeg.hip) + ","
+                "\"knee\":" + String(currentLeftLeg.knee) + ","
+                "\"ankle\":" + String(currentLeftLeg.ankle) + "},"
+                "\"right\":{"
+                "\"hip\":" + String(currentRightLeg.hip) + ","
+                "\"knee\":" + String(currentRightLeg.knee) + ","
+                "\"ankle\":" + String(currentRightLeg.ankle) + "}"
+                "}";
+  server.send(200, "application/json", json);
+}
+
+void handleReset() {
+  Serial.println("Resetting to neutral position");
+  currentLeftLeg.hip = robotConfig.hipLOffset;
+  currentLeftLeg.knee = robotConfig.kneeLOffset;
+  currentLeftLeg.ankle = robotConfig.ankleLOffset;
+  currentRightLeg.hip = robotConfig.hipROffset;
+  currentRightLeg.knee = robotConfig.kneeROffset;
+  currentRightLeg.ankle = robotConfig.ankleROffset;
+  
+  hipL.write(currentLeftLeg.hip);
+  kneeL.write(currentLeftLeg.knee);
+  ankleL.write(currentLeftLeg.ankle);
+  hipR.write(currentRightLeg.hip);
+  kneeR.write(currentRightLeg.knee);
+  ankleR.write(currentRightLeg.ankle);
+  
+  // Redirect based on query parameter
+  if (server.hasArg("from") && server.arg("from") == "kinematics") {
+    server.sendHeader("Location", "/kinematics");
+  } else {
+    server.sendHeader("Location", "/");
+  }
+  server.send(303);
+}
 
 // -------------------- INITIALIZATION --------------------
 void initializeWiFi() {
@@ -115,6 +154,8 @@ void initializeWebServer() {
   server.on("/backward", handleBackward);
   server.on("/left", handleLeft);
   server.on("/right", handleRight);
+  server.on("/getlegs", handleGetLegs);
+  server.on("/reset", handleReset);
 
   server.begin();
   Serial.println("Servidor web iniciado.");
