@@ -37,8 +37,8 @@ void initTutorialStepForward(float stepLength);
 // Get the current tutorial step (without executing)
 TutorialStep* getCurrentTutorialStep();
 
-// Get angle calculation with explanation for given x, z, leg
-AngleCalculation calculateAnglesWithExplanation(float x, float z, char leg);
+// Get angle calculation with explanation for given x, z, leg, phase, writeNumber
+AngleCalculation calculateAnglesWithExplanation(float x, float z, char leg, int phase, int writeNumber);
 
 // Execute the current tutorial step (writes servos)
 bool executeCurrentTutorialStep();
