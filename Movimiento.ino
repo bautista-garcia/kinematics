@@ -1,6 +1,7 @@
 #include "main.h"
 #include "webinterface.h"
 #include "walking.h"
+#include "walking_tutorial.h"
 
 
 // -------------------- WIFI / SERVER --------------------
@@ -102,6 +103,9 @@ void handleReset() {
   kneeR.write(currentRightLeg.knee);
   ankleR.write(currentRightLeg.ankle);
   
+  // Reset tutorial state
+  resetTutorial();
+  
   // Redirect based on query parameter
   if (server.hasArg("from") && server.arg("from") == "kinematics") {
     server.sendHeader("Location", "/kinematics");
@@ -109,6 +113,70 @@ void handleReset() {
     server.sendHeader("Location", "/");
   }
   server.send(303);
+}
+
+// Tutorial handlers
+void handleTutorialInit() {
+  Serial.println("Initializing tutorial stepForward");
+  resetTutorial();
+  initTutorialStepForward(robotConfig.stepLength);
+  server.send(200, "application/json", "{\"success\":true}");
+}
+
+void handleTutorialStep() {
+  TutorialStep* step = getCurrentTutorialStep();
+  TutorialState* state = getTutorialState();
+  
+  if (step == nullptr || state->isComplete) {
+    server.send(200, "application/json", "{\"complete\":true}");
+    return;
+  }
+  
+  // Escape quotes in explanation for JSON
+  String escapedExplanation = step->angles.explanation;
+  escapedExplanation.replace("\"", "\\\"");
+  escapedExplanation.replace("\n", "\\n");
+  
+  String json = "{";
+  json += "\"success\":true,";
+  json += "\"currentIndex\":" + String(state->currentWriteIndex) + ",";
+  json += "\"totalSteps\":8,";
+  json += "\"step\":{";
+  json += "\"phase\":" + String(step->phase) + ",";
+  json += "\"leg\":\"" + String(step->leg) + "\",";
+  json += "\"writeNumber\":" + String(step->writeNumber) + ",";
+  json += "\"x\":" + String(step->x, 2) + ",";
+  json += "\"z\":" + String(step->z, 2) + ",";
+  json += "\"angles\":{";
+  json += "\"hip\":" + String(step->angles.hip, 2) + ",";
+  json += "\"knee\":" + String(step->angles.knee, 2) + ",";
+  json += "\"ankle\":" + String(step->angles.ankle, 2) + ",";
+  json += "\"explanation\":\"" + escapedExplanation + "\"";
+  json += "}";
+  json += "}";
+  json += "}";
+  
+  server.send(200, "application/json", json);
+}
+
+void handleTutorialExecute() {
+  Serial.println("Executing current tutorial step");
+  bool success = executeCurrentTutorialStep();
+  if (success) {
+    server.send(200, "application/json", "{\"success\":true}");
+  } else {
+    server.send(200, "application/json", "{\"success\":false,\"error\":\"No step to execute\"}");
+  }
+}
+
+void handleTutorialAdvance() {
+  Serial.println("Advancing to next tutorial step");
+  bool hasMore = advanceTutorialStep();
+  if (hasMore) {
+    server.send(200, "application/json", "{\"hasMore\":true}");
+  } else {
+    server.send(200, "application/json", "{\"hasMore\":false,\"complete\":true}");
+  }
 }
 
 // -------------------- INITIALIZATION --------------------
@@ -156,6 +224,12 @@ void initializeWebServer() {
   server.on("/right", handleRight);
   server.on("/getlegs", handleGetLegs);
   server.on("/reset", handleReset);
+  
+  // Tutorial endpoints
+  server.on("/tutorial/init", handleTutorialInit);
+  server.on("/tutorial/step", handleTutorialStep);
+  server.on("/tutorial/execute", handleTutorialExecute);
+  server.on("/tutorial/advance", handleTutorialAdvance);
 
   server.begin();
   Serial.println("Servidor web iniciado.");
